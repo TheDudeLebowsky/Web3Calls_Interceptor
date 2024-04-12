@@ -1,0 +1,9 @@
+/.history
+/config/api_list.py
+/.vscode
+/__pycache__
+/config/__pycache__
+/downloaded_files
+/extensions
+/airdrop.py
+/transact_abidecode.py
