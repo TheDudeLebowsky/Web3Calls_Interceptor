@@ -6,11 +6,11 @@ import sys
 import json
 from eth_utils import function_abi_to_4byte_selector
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-from my_colors import *
+from modules.my_colors import *
 from config.abi_list import *
 from config.addresses import *
 from config.rpc_config import RPC_CONFIGURATION
-from transact_get import TransactGet
+from modules.transact_get import TransactGet
 
 def save_pretty_format_to_file(data, filename, debugmode=False):
     """
@@ -133,84 +133,6 @@ class Decoder:
             return None
         return functionSignature
     
-    
-    
-    
-    #//todo
-    def decode_input_data_from_tx_hash(self, tx_hash):
-        """Will extract the input data from a transaction and decode it using the contract's ABI."""
-        """Not completed yet."""
-        tx = self.web3.eth.get_transaction(tx_hash)
-        input_hex = self.web3.to_hex(tx['input'])
-        r_hex = self.web3.to_hex(tx['r'])
-        s_hex = self.web3.to_hex(tx['s'])
-        v = tx['v']
-        print(f"To : {tx['to']} Smart contract")
-        print(f"From : {tx['from']}")
-        print(f"Nonce : {tx['nonce']}\n")
-        print(f"Input : {input_hex}")
-        print(f"Value : {tx['value']}\n")
-        print(f"R : {r_hex}")
-        print(f"S : {s_hex}")
-        print(f"V : {v}\n")
-        address, abi, contract, ticker = self.set_contract(tx['to'])
-        try:
-            func_obj, func_params = contract.decode_function_input(tx["input"])
-            #//todo : print the decoded function
-        except Exception as e:
-            print(f"Error decoding function input : {e}")
-            return None
-        input("Press Enter to continue...")
-    
-    def decode_input_data(self, input_data, contract_address, abi=None, debugmode=False):
-        """Decodes the input data of a transaction using the contract's ABI."""
-        """If no ABI is provided, the ABI will be fetched from the contract address using web3"""
-        """If no ABI is found, the ABI will be fetched from the config file"""
-        
-        
-        
-        
-        if abi is None:
-            if self.get is not None:
-                abi = self.get.abi(contract_address=contract_address)
-            else:
-                abi= filter_assets(main_dict=MAIN_DICT, networks=self.rpc_network, asset_types='contract', key1='abi', mode='single', address=contract_address)
-        
-            # If ABI is provided, convert it to a dictionary of methods and find the function signature
-            if isinstance(abi, list) and len(abi) == 0:
-                print(f"{RED}No ABI found for {contract_address}{RESET}")
-                return None
-            elif isinstance(abi, dict) and len(abi) == 0:
-                print(f"{RED}No ABI found for {contract_address}{RESET}")
-                return None
-            elif abi is None:
-                print(f"{RED}No ABI found for {contract_address}{RESET}")
-                return None
-        
-        functionSignature = None    
-        method_id, argument_list = self.parse_input_data(input_data)
-        functionSignature = self.methodID_to_functionSignature(methodID=method_id, abi=abi)
-            
-        if debugmode:
-            print(f"\n{BOLD}Method ID{RESET} : {INFO}{method_id}{RESET}")
-            print(f"{BOLD}Function Signature{RESET} : {INFO}{functionSignature}{RESET}")
-
-
-        interpreted_args = self.interpret_arguments(functionSignature, argument_list)
-        for arg in interpreted_args:
-            print(arg)
-        return interpreted_args
-    
-    def parse_input_data(self, input_data, debugmode=True):
-        method_id = input_data[:10]
-        arguments = input_data[10:]
-        argument_list = [arguments[i:i+64] for i in range(0, len(arguments), 64)]
-        if debugmode:
-            print(f"\n{BOLD}Method ID{RESET} : {INFO}{method_id}{RESET}")
-            for arg in argument_list:
-                print(f"{BOLD}Argument {RESET} : {INFO}{arg}{RESET}")
-        return method_id, argument_list
-
     def parse_function_signature(self, signature):
 
         """
@@ -238,6 +160,11 @@ class Decoder:
         else:
             print(f"Address is already checksummed : {checksum_address}")
         return checksum_address
+
+
+
+
+
 
     #//main
     def interpret_arguments(self, func_signature, hex_args):

@@ -3,8 +3,7 @@ import os
 import re
 import sys
 from eth_utils import function_abi_to_4byte_selector
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-from my_colors import *
+from modules.my_colors import *
 from config.abi_list import *
 from config.addresses import *
 from config.rpc_config import RPC_CONFIGURATION
@@ -95,16 +94,18 @@ class TransactMethodID():
                         tuple_components = param.get('components', [])
                         tuple_signature = '(' + ','.join(f"{c['type']}" for c in tuple_components) + ')[]'
                         param_details.append(param['name'] + tuple_signature)
+                        types.append(tuple_signature) #TESTING
                     elif param['type'].startswith('tuple'):
                         # Handle single tuple types
                         tuple_components = param.get('components', [])
                         tuple_signature = '(' + ','.join(f"{c['type']}" for c in tuple_components) + ')'
                         param_details.append(param['name'] + tuple_signature)
+                        types.append(tuple_signature) #TESTING
                     else:
                         # Handle simple types
                         param_details.append(param['name'] + '[' + param['type'] + ']')
+                        types.append(param['type'])  # Collect parameter type #TESTING was using this
                     names.append(param['name'])  # Collect parameter name
-                    types.append(param['type'])  # Collect parameter type
                 signature += ','.join(param_details)
                 signature += ')'
 
@@ -121,7 +122,7 @@ class TransactMethodID():
                     'names': names,
                     'types': types
                 }
-            dict_list.append(function_dict)
+                dict_list.append(function_dict)
                 
 
         print(f"\n\n{BOLD}Function Dictionary : {RESET}")

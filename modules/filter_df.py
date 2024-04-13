@@ -2,16 +2,22 @@ import pandas as pd
 import json
 from eth_utils.abi import function_abi_to_4byte_selector
 import time
+from pprint import pprint
 import os
 import csv
 import re
-from api_4bytes import get4Bytes
-from transact_decode import Decoder
-from transact_get import TransactGet
-from transact_methodid import TransactMethodID
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.')))
+#print(sys.path)
+from modules.api_4bytes import get4Bytes
+from modules.transact_decode import Decoder
+from modules.transact_get import TransactGet
+from modules.transact_methodid import TransactMethodID
 from config.rpc_config import RPC_CONFIGURATION
-from transact_inputdata_decoder import InputDataDecoder
-
+from modules.transact_inputdata_decoder import InputDataDecoder
+from pygments import highlight
+from pygments.lexers import JsonLexer
+from pygments.formatters import TerminalFormatter
 RED = "\033[91m"
 GREEN = "\033[92m"
 CYAN = "\033[96m"
@@ -32,13 +38,13 @@ def cls():
         os.system('cls')
 
 class FilterDF():
-    def __init__(self, rpc=None, filename='events.json'):
+    def __init__(self, rpc=None, filename='data/events.json'):
         with open(filename, 'r') as f:
             data = pd.read_json(f, lines=True)
 
         self.df = pd.json_normalize(data.to_dict(orient="records"))
         self.df = self.df.dropna(axis=1, how='all')
-        self.df.to_csv('events.csv', index=False)
+        self.df.to_csv('data/events.csv', index=False)
         pd.set_option('display.max_colwidth', 30)
         pd.set_option('display.max_columns', None)
         self.filename = filename
@@ -58,7 +64,7 @@ class FilterDF():
         self.inputdecoder = InputDataDecoder()
         self.contract_address = None
         self.abi = None
-        self.dict_filename = 'web3_readcalls.csv'
+        self.dict_filename = 'data/web3_readcalls.csv'
 
     
     #//HELPER_FUNCTIONS
@@ -173,6 +179,33 @@ class FilterDF():
             if debugmode == True and none_value == True:
                 input('Press Enter to continue...')
     
+    def pretty_print(self, data, indent=0, debugmode=False):
+        """
+        Recursively prints nested dictionaries, lists, or tuples with indentation.
+        """
+        spacer = ' ' * indent
+        if isinstance(data, dict):
+            for key, value in data.items():
+                print(f"{spacer}{BOLD}{key}{RESET}:", end=' ')
+                if isinstance(value, (dict, list, tuple)):
+                    print()
+                    self.pretty_print(value, indent + 4, debugmode)
+                else:
+                    print(f"{BOLD+BLUE}{value}{RESET}")
+        elif isinstance(data, (list, tuple)):
+            for index, item in enumerate(data):
+                if isinstance(item, (dict, list, tuple)):
+                    print(f"{spacer}{BOLD}Item{RESET} {CYAN}{index}{RESET}:")
+                    self.pretty_print(item, indent + 4, debugmode)
+                else:
+                    print(f"{spacer}{BOLD}Item{RESET} {CYAN}{index}{RESET}: {item}")
+        else:
+            print(f"{spacer}{data}")
+
+        if debugmode and indent == 0:
+            input('Press Enter to continue...')
+
+
     def csv_to_dict_list(self, filename=None):
         if filename is None:
             filename = self.dict_filename
@@ -237,9 +270,10 @@ class FilterDF():
                                 if data and to: 
                                     if self.method_id_from_data_pattern.match(data):
                                         result['methodid'] = self.method_id_from_data_pattern.match(data).group(1)
+                                        result['data'] = data[10:]
                                     elif self.method_id_pattern.match(data):
                                         result['methodid'] = self.method_id_pattern.match(data).group()
-                                    result['data'] = data
+                                        result['data'] = ''
                                     result['to'] = to
                                     result['details'] = 'call'
 
@@ -248,7 +282,7 @@ class FilterDF():
                                 #If will not remove the regex checks for methodID in case of future changes.
                                 if self.method_id_from_data_pattern.match(first_param):
                                     result['methodid'] = self.method_id_from_data_pattern.match(first_param).group(1)
-                                    result['data'] = first_param
+                                    result['data'] = first_param[10:]
                                     result['details'] = 'methodID'
                                 elif self.method_id_pattern.match(first_param):
                                     result['methodid'] = self.method_id_pattern.match(first_param).group(1)
@@ -308,13 +342,14 @@ class FilterDF():
             #region Initialise variables
             data = item.get('data', None)
             index = item.get('index', None)
+            methodid = item.get('methodid', None)
             contract_address = item.get('to', None)
+
             print(f"\n{PINK}{DIVIDER}\n{BOLD}  Parsing and decoding dictionary # {BLUE}{count}{RESET}{PINK}\n{DIVIDER}{RESET}")
             count += 1
             if contract_address is None or contract_address == '':
                 print(f"{RED}No contract address found in the dictionary.{RESET}")
                 print(item)
-                input('Press Enter to continue...')
             #endregion
             
             #region getABI Get the ABI only if the contract address has changed (optimization)
@@ -331,20 +366,25 @@ class FilterDF():
             
             
             
-            
-            methodID, argumentsList = self.decoder.parse_input_data(data, debugmode)
-            
-            
-            
+            if data is None or data == '' and methodid is not None:
+                print(f"{RED}No data found in the dictionary.{RESET}")
+                print(item)
+                #todo : attempt to get signature from methodID
+                continue
             for item in abi_dict:
-                if item['selector'] == methodID:
-                    print(f"{GREEN}Found methodID in ABI{RESET} : {CYAN}{methodID}{RESET} | Signature : {CYAN+BOLD}{item['signature']}{RESET}")
+                if item['selector'] == methodid:
+                    print(f"{GREEN}Found methodID in ABI{RESET} : {CYAN}{methodid}{RESET} | Signature : {CYAN+BOLD}{item['signature']}{RESET}")
                     ethcall_dict = item
                     break
+            if ethcall_dict is None:
+                input('Press Enter to continue...')
             ethcall_params = ethcall_dict.get('params', None)
             ethcall_signature = ethcall_dict.get('signature', None)
             ethcall_names = ethcall_dict.get('names', None)
             ethcall_types = ethcall_dict.get('types', None)
+            
+            
+            
 
             #functionParam = self.decoder.methodID_to_functionParams(methodID=methodID, abi=self.abi, debugmode=debugmode)
             #functionSignature = self.get4bytes.get_functionSignature_from_methodID(methodID, debugmode=debugmode)
@@ -355,22 +395,23 @@ class FilterDF():
             
             if 1==2:
                 if functionParam is None:
-                    print(f"{RED}Cant find corresponding signature{RESET} : {CYAN}{methodID}{RESET}. Please check ABI{RESET}")
+                    print(f"{RED}Cant find corresponding signature{RESET} : {CYAN}{methodid}{RESET}. Please check ABI{RESET}")
                     print(item)
                     return None
                 else:
                     functionParam = self.decoder.parse_function_signature(functionParam)
+            
             #Decode baby!
-            #interpreted_args = self.decoder.interpret_arguments(functionParam, argumentsList)
+            argumentsList = self.inputdecoder.parse_input_data(data, debugmode) #//DEBUG
             interpreted_args = self.inputdecoder.decode_this(data, ethcall_types, ethcall_names, debugmode)
+            
+            
             if interpreted_args is None:
                 print(f"{RED}Could not interpret arguments.{RESET}")
                 print(item)
                 return None
             print(f"\n{DIVIDER}\n{CYAN}Index: {index}{RESET}\n{DIVIDER}")
-            for arg in interpreted_args:
-                print(f"{CYAN}{arg_index}{RESET} : {arg}{RESET}")
-                arg_index += 1
+            self.pretty_print(interpreted_args)
             print(f"{DIVIDER}")
 
         return
@@ -388,8 +429,8 @@ def main():
     cls()
     network_choice = 'berachain'
     rpc = RPC_CONFIGURATION[network_choice]
-    filter_df = FilterDF(rpc=rpc, filename='events.json')
-    filter_df.extract_web3_readcalls(debugmode=False)
+    filter_df = FilterDF(rpc=rpc, filename='data/events.json')
+    filter_df.extract_web3_readcalls(debugmode=True)
     #time.sleep(1)
     cls()
     filter_df.parse_and_decode(debugmode=True)

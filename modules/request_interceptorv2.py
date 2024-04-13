@@ -3,10 +3,6 @@ from seleniumbase import BaseCase
 from seleniumbase import SB
 import pandas as pd
 import threading
-
-
-
-
 RED = "\033[91m"
 GREEN = "\033[92m"
 CYAN = "\033[96m"
@@ -15,15 +11,11 @@ BLUE = "\033[94m"
 PADDING = " " * 50
 
 
-#TODO: Pretty much working, could need some more testing and add user data directory option. Small issue when closing tabs
-
-
-
-class CDPTests(BaseCase):
-    def setUp(self):
-        DIR = 'H:/Scripts/9_MY_MODULES/my_selenium_utils/extensions/nkbihfbeogaeaoehlefnkodbefgpgknn'
-        
-        super(CDPTests, self).setUp()
+#//TESTING attempt to use this class without the need for pytest use SB instead of BaseCase
+#//NOT WORKING
+DIR = 'extensions/nkbihfbeogaeaoehlefnkodbefgpgknn/11.13.1_0'
+class CDPTests1():
+    def __init__(self):
         self.initial_url = "https://artio.bend.berachain.com/dashboard"
         self.requests_counter = 0
         self.tab_counter = 0
@@ -32,7 +24,36 @@ class CDPTests(BaseCase):
         self.output_file_path_json = 'events.json'
         self.network_requests = True
         self.network_responses = True
+        self.driver = SB(uc=True, uc_cdp_events=True, extension_dir=DIR)
+        self.driver = get_new_driver(undetectable=True, uc_cdp_events=True)
+    def start_browser(self):
+        
+        with self.driver as sb:  # By default, browser="chrome" if not set.
+            
+            sb.open(self.initial_url)
+            self.add_cdp_listener(sb)
 
+            #initiate the tab checking thread
+            self.keep_checking_tabs = True
+            tab_checking_thread = threading.Thread(target=self.switch_to_latest_tab_periodically, args=(5,))
+            tab_checking_thread.start()
+
+            #Wait for user input to exit, avoid closing the browser before the test is done
+            input('press enter to exit') 
+            self.keep_checking_tabs = False 
+            tab_checking_thread.join()  
+            
+            
+            sb.open("https://seleniumbase.github.io/realworld/login")
+            sb.type("#username", "demo_user")
+            sb.type("#password", "secret_pass")
+            sb.enter_mfa_code("#totpcode", "GAXG2MTEOR3DMMDG")  # 6-digit
+            sb.assert_text("Welcome!", "h1")
+            sb.highlight("img#image1")  # A fancier assert_element() call
+            sb.click('a:contains("This Page")')  # Use :contains() on any tag
+            sb.click_link("Sign out")  # Link must be "a" tag. Not "button".
+            sb.assert_element('a:contains("Sign in")')
+            sb.assert_exact_text("You have been signed out!", "#top_message")
     #HELPER FUNCTIONS
     def save_to_json(self):
         """Updates the JSON file with the latest event data."""
@@ -55,7 +76,7 @@ class CDPTests(BaseCase):
                 print(f"Error switching to the latest tab: {e}")
             self.sleep(interval)
     
-    def add_cdp_listener(self):
+    def add_cdp_listener(self, sb):
 
         #To print everything, use "*". Otherwise select specific headers.
         def capture_data(data, save_to_file=True):
@@ -69,16 +90,17 @@ class CDPTests(BaseCase):
                 print(pformat(data))
 
         #Add the CDP listeners according to the options
+
         if self.network_requests is True:
-            self.driver.add_cdp_listener(
+            sb.add_cdp_listener(
                 "Network.requestWillBeSent", capture_data)
-            self.driver.add_cdp_listener(
+            sb.add_cdp_listener(
                 "Network.requestWillBeSentExtraInfo", capture_data)
 
         if self.network_responses is True:
-            self.driver.add_cdp_listener(
+            sb.add_cdp_listener(
                 "Network.responseReceived", capture_data)
-            self.driver.add_cdp_listener(
+            sb.add_cdp_listener(
                 "Network.responseReceivedExtraInfo", capture_data)
 
 
@@ -91,10 +113,10 @@ class CDPTests(BaseCase):
         #options.add_argument("user-data-dir=PATH")
 
         #Initialize the driver
-        if not (self.undetectable and self.uc_cdp_events):
-            print("Warning: The undetectable and uc_cdp_events options are required for this test.")
-            self.get_new_driver(undetectable=True, uc_cdp_events=True)
-        self.open(self.initial_url)
+        #if not (self.undetectable and self.uc_cdp_events):
+        #    print("Warning: The undetectable and uc_cdp_events options are required for this test.")
+        #    self.get_new_driver(undetectable=True, uc_cdp_events=True)
+        self.driver.open(self.initial_url)
         self.add_cdp_listener()
 
         #initiate the tab checking thread
@@ -107,7 +129,7 @@ class CDPTests(BaseCase):
         self.keep_checking_tabs = False 
         tab_checking_thread.join()  
 
+
 if __name__ == "__main__":
-    from pytest import main
-    DIR = 'extensions/nkbihfbeogaeaoehlefnkodbefgpgknn/11.13.1_0' #//IMPORTANT Path to the extension directory
-    main([__file__, "--uc", "--uc-cdp", "-s", f"--extension_dir={DIR}"])
+    interceptor = CDPTests1()
+    interceptor.start_browser()

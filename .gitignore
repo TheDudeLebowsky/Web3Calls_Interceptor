@@ -7,3 +7,6 @@
 /extensions
 /airdrop.py
 /transact_abidecode.py
+
+/modules/__pycache__
+/.pytest_cache
