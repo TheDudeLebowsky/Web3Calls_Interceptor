@@ -17,7 +17,7 @@ PADDING = " " * 50
 
 
 #TODO: Pretty much working, could need some more testing and add user data directory option. Small issue when closing tabs
-DIR = 'extensions/nkbihfbeogaeaoehlefnkodbefgpgknn/11.13.1_0'
+#TODO Need to find how to replace the use of BaseCase to SB
 
 def cls():
     if os.name == 'nt':
@@ -28,7 +28,7 @@ def cls():
 
 class CDPTests(BaseCase):
     def setUp(self):
-        DIR = 'H:/Scripts/9_MY_MODULES/my_selenium_utils/extensions/nkbihfbeogaeaoehlefnkodbefgpgknn'
+
         
         super(CDPTests, self).setUp()
         self.initial_url = "https://artio.bend.berachain.com/dashboard"
@@ -131,5 +131,9 @@ if __name__ == "__main__":
     #interceptor.test_main()
     
     from pytest import main
-    DIR = 'extensions/nkbihfbeogaeaoehlefnkodbefgpgknn/11.13.1_0' #//IMPORTANT Path to the extension directory
-    main([__file__, "--uc", "--uc-cdp", "-s", f"--extension_dir={DIR}"])
+    USER_DIR = 'user_data_dir'
+    #//IMPORTANT Path to the extension directory
+    DIR1 = 'extensions/jifpbeccnghkjeaalbbjmodiffmgedin/1.7.0_0' # Chrome extension source viewer
+    DIR = 'extensions/nkbihfbeogaeaoehlefnkodbefgpgknn/11.13.1_0' # Metamask --extension-dir="dir1,dir2"
+
+    main([__file__, "--uc", "--uc-cdp", "-s", f"--extension_dir={DIR}", f"--user_data_dir={USER_DIR}"])

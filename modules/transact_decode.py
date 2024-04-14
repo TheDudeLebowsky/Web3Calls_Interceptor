@@ -161,100 +161,15 @@ class Decoder:
             print(f"Address is already checksummed : {checksum_address}")
         return checksum_address
 
-
-
-
-
-
-    #//main
-    def interpret_arguments(self, func_signature, hex_args):
-        interpreted_args = []
-        
-        # Function to interpret a single hex argument based on the provided type
-        def interpret_arg(hex_arg, arg_type):
-            if arg_type == 'bool':
-                return bool(int(hex_arg, 16))
-            elif arg_type in ['uint256', 'uint16']:
-                return int(hex_arg, 16)
-            elif arg_type == 'address':
-                return '0x' + hex_arg[-40:]
-            elif arg_type == 'bytes32':
-                try:
-                    decoded_string = bytes.fromhex(hex_arg).decode('utf-8').rstrip('\x00')
-                    if decoded_string.isprintable():
-                        return decoded_string
-                    else:
-                        return "Non-ASCII or binary data"
-                except:
-                    return "Error decoding string"
-            else:
-                return "Unsupported type"
-        
-        # Process each argument according to its type in the function signature
-        for name, arg_type in func_signature.items():
-            if arg_type == 'tuple[]':
-                start, end = self.find_tuple_boundaries(hex_args, 0, list(func_signature.values()))
-                #//todo : Implement tuple[] interpretation  
-                
-            hex_arg = hex_args.pop(0) # Remove the first argument from the list for processing
-            value = interpret_arg(hex_arg, arg_type)
-            interpreted_args.append({
-                'Argument': hex_arg,
-                'Name': name,
-                'Type': arg_type,
-                'Value': value
-            })
-        
-        return interpreted_args
-    
-    def find_tuple_boundaries(self, hex_args, current_position, element_types):
-        try:
-            # Calculate the initial offset where tuple data starts
-            offset = int(hex_args[current_position:current_position + 64], 16) * 2
-            if offset > len(hex_args):
-                return None, None
-
-            start = offset
-            end = start
-            for element_type in element_types:
-                if start >= len(hex_args):  # Check if the current start is within bounds
-                    break
-
-                if element_type in self.dynamic_types:
-                    # For dynamic types, find the length from the offset stored at 'start'
-                    if start + 64 > len(hex_args):
-                        break
-                    element_offset = int(hex_args[start:start + 64], 16) * 2
-                    if element_offset + 64 > len(hex_args):
-                        break
-                    length = int(hex_args[element_offset:element_offset + 64], 16) * 2
-                else:
-                    length = self.static_length
-
-                start += length
-                end = start
-
-            return offset, end
-        except ValueError as e:
-            print(f"Error processing tuple boundaries: {e}")
-            return None, None
-
+    #//TESTING
     def decode_with_web3(self, input_data, contract_address, abi):
         contract = self.web3.eth.contract(address=contract_address, abi=abi)
         func_obj, func_params = contract.decode_function_input(input_data)
 
 
-def main():
-    tx_hash = '0x324bcc68c9a83aa1d5aba9b9781e1fa94d57d1e2fed19f24a9f8e1b17b9b9fdc'
-    hex_args = ("0000000000000000000000000000000000000000000000000000000000000080" +
-                "0000000000000000000000000000000000000000000000000000000000000001" +
-                "0000000000000000000000000000000000000000000000000000000000000001" +
-                "0000000000000000000000000000000000000000000000000000000000000005" +
-                "48656c6c6f000000000000000000000000000000000000000000000000000000")
 
-    element_types = ['uint256', 'bool', 'string']
-    current_position = 0
-    
+
+def main():
     network_choice = 'sepolia arbitrum'
     rpc = RPC_CONFIGURATION[network_choice]
     cryptotest = Decoder(rpc=rpc)
@@ -263,11 +178,7 @@ def main():
     address = '0x9d1dB8253105b007DDDE65Ce262f701814B91125'
     abi = filter_assets(main_dict=MAIN_DICT, networks='berachain', asset_types='contract', key1='abi', mode='single', address=address)
     cryptotest.decode_with_web3(input_data, address, abi)
-    start, end =  cryptotest.find_tuple_boundaries(hex_args, current_position, element_types)
-    print(f"Start : {start} | End : {end}")
-    #cryptotest.decode_input_data('0xc2eb801373555344000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004563918244f4000073424e4200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001ef384914880004c617965725a65726f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000',
-    #                        contract_address='0xe0875cbd144fe66c015a95e5b2d2c15c3b612179', abi=None, debugmode=True)
-    #cryptotest.decode_input_data_from_tx_hash(tx_hash='0x324bcc68c9a83aa1d5aba9b9781e1fa94d57d1e2fed19f24a9f8e1b17b9b9fdc')
-    
+
+
 if __name__ == "__main__":
     main()

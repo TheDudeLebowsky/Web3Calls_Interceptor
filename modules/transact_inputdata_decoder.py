@@ -58,9 +58,6 @@ class InputDataDecoder:
                 print(f"{BOLD}Argument {RESET} : {CYAN}{arg}{RESET}")
         return argument_list
 
-
-
-
     def _decode_nested_data(self, data, debugmode=False):
         if isinstance(data, tuple):
             decoded_list = []
@@ -73,7 +70,6 @@ class InputDataDecoder:
             return '0x' + data.hex()
         else:
             return data
-
 
     def decode_input_data(self, inputdata, types, debugmode=False):
         decoded_data_list = eth_abi.decode(types, HexBytes(inputdata))
@@ -136,9 +132,10 @@ class InputDataDecoder:
         return result_list
 
     def create_dict(self, names, types, decoded_data, debugmode=False):
-        print(f"names : {names}")
-        print(f"types : {types}")
-        print(f"decoded_data : {decoded_data}")
+        if debugmode:
+            print(f"names : {names}")
+            print(f"types : {types}")
+            print(f"decoded_data : {decoded_data}")
         if len(names) != len(types) or len(names) != len(decoded_data):
             if debugmode:
                 print("Error: Length of names, types, and decoded data do not match")

@@ -4,9 +4,17 @@
 /__pycache__
 /config/__pycache__
 /downloaded_files
-/extensions
+/extensions/*
+/user_data_dir/*
 /airdrop.py
 /transact_abidecode.py
 
 /modules/__pycache__
 /.pytest_cache
+
+/archived_logs
+
+/latest_logs
+
+/modules/request_interceptorv2.py
+/SeleniumBase

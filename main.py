@@ -5,7 +5,7 @@ from modules.filter_df import FilterDF
 
 
 DIR = 'extensions/nkbihfbeogaeaoehlefnkodbefgpgknn/11.13.1_0' #//IMPORTANT Path to the extension directory
-
+USER_DIR = 'user_data_dir'
 def cls():
     from os import system, name
     system('cls' if name == 'nt' else 'clear')
@@ -13,7 +13,8 @@ def cls():
 
 def intercept_requests():
     from pytest import main
-    main(["modules/request_interceptor.py", "--uc", "--uc-cdp", "-s", f"--extension_dir={DIR}"])
+    #, f"--user_data_dir={USER_DIR}"
+    main(["modules/request_interceptor.py", "--uc", "--uc-cdp", "-s", f"--extension_dir={DIR}", f"--user_data_dir={USER_DIR}"])
 
 def process_data(network_choice, filename, debugmode):
     cls()

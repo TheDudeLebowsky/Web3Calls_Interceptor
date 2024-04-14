@@ -12,26 +12,19 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 from modules.api_4bytes import get4Bytes
 from modules.transact_decode import Decoder
 from modules.transact_get import TransactGet
+from modules.my_colors import *
 from modules.transact_methodid import TransactMethodID
 from config.rpc_config import RPC_CONFIGURATION
 from modules.transact_inputdata_decoder import InputDataDecoder
 from pygments import highlight
 from pygments.lexers import JsonLexer
 from pygments.formatters import TerminalFormatter
-RED = "\033[91m"
-GREEN = "\033[92m"
-CYAN = "\033[96m"
-RESET = "\033[0m"
-YELLOW = "\033[93m"
-BLUE = "\033[94m"
-BOLD = "\033[1m"
 DIVIDER = '-' * 100
-PINK = "\033[95m"   
 
 
 
 #//TODO Clean the code and remove unnecessary functions
-#//BROKEN : Find the issue with tuple not being decoded by eth_abi
+
 
 def cls():
     if os.name == 'nt':
@@ -48,6 +41,7 @@ class FilterDF():
         pd.set_option('display.max_colwidth', 30)
         pd.set_option('display.max_columns', None)
         self.filename = filename
+        self.output_dict_filename = 'data/decoded_events.csv'
         self.eth_address_pattern = re.compile(r'^0x[a-fA-F0-9]{40}$')
         self.method_id_pattern = re.compile(r'^0x[a-fA-F0-9]{8}$')
         self.hash_pattern = re.compile(r'^0x[a-fA-F0-9]{64}$')
@@ -179,29 +173,64 @@ class FilterDF():
             if debugmode == True and none_value == True:
                 input('Press Enter to continue...')
     
-    def pretty_print(self, data, indent=0, debugmode=False):
+    def pretty_print(self, data, item=None, indent=0, count=None, debugmode=False):
         """
         Recursively prints nested dictionaries, lists, or tuples with indentation.
         """
-        spacer = ' ' * indent
-        if isinstance(data, dict):
-            for key, value in data.items():
-                print(f"{spacer}{BOLD}{key}{RESET}:", end=' ')
-                if isinstance(value, (dict, list, tuple)):
-                    print()
-                    self.pretty_print(value, indent + 4, debugmode)
-                else:
-                    print(f"{BOLD+BLUE}{value}{RESET}")
-        elif isinstance(data, (list, tuple)):
-            for index, item in enumerate(data):
-                if isinstance(item, (dict, list, tuple)):
-                    print(f"{spacer}{BOLD}Item{RESET} {CYAN}{index}{RESET}:")
-                    self.pretty_print(item, indent + 4, debugmode)
-                else:
-                    print(f"{spacer}{BOLD}Item{RESET} {CYAN}{index}{RESET}: {item}")
-        else:
-            print(f"{spacer}{data}")
+        PADDING = " " * 30
+        BRIGHT = "\033[1m"
+        methodid = item.get('methodid', None) if item is not None else None
+        signature = item.get('signature', None) if item is not None else None
+        index = item.get('index', None) if item is not None else None
+        contract_address = item.get('to', None) if item is not None else None
+        method = item.get('method', None) if item is not None else None
+        function_name = item.get('function_name', None) if item is not None else None
+        info = item.get('details', None) if item is not None else None
+        if item is not None:
+            details = ''
+            details += (f"\n\n{BOLD+PINK+BRIGHT}{DIVIDER}\n{BOLD}{PADDING}Parsing and decoding dictionary # {BLUE}{count}{RESET}{PINK}\n{DIVIDER}{RESET}\n") if count is not None else ''
+            details += (f"{BOLD}Index{RESET} : {BOLD+CYAN}{index}{RESET}\n") if index is not None else ''
+            details += (f"{BOLD}MethodID{RESET} : {BOLD+CYAN}{methodid}{RESET}\n") if methodid is not None or methodid != '' else ''
+            details += (f"{BOLD}Function called{RESET} : {BOLD+CYAN}{function_name}{RESET}\n") if function_name is not None else ''
+            details += (f"{BOLD}Signature{RESET} : {BOLD+CYAN}{signature}{RESET}\n") if signature is not None else ''
+            #details += (f"{BOLD}Method{RESET} : {BOLD+CYAN}{method}{RESET}\n") if method is not None else ''
+            details += (f"{BOLD}Contract Address{RESET} : {BOLD+CYAN}{contract_address}{RESET}\n") if contract_address is not None or contract_address != '' else ''
+            details += (f"{DIVIDER}")
+            print(details)
+            if data is None or data == '' or data == {} or data == []:
+                print(f"{BOLD}Data{RESET}: {YELLOW}None{RESET}")
+                print(f"{DIVIDER}\n\n")
+                return
+            elif contract_address == '' or contract_address is None:
+                print(f"{BOLD}Eth call{RESET}: {CYAN}{method}{RESET}")
+                print(f"{BOLD}Details{RESET}: {CYAN}{info}{RESET}")
+                print(f"{BOLD}Data{RESET}: {CYAN}{data}{RESET}")
+                print(f"{DIVIDER}\n\n")
+                return
+        if data is not None and data != '' and data != {} or data != []:
+            spacer = ' ' * indent
+            if isinstance(data, dict):
+                for key, value in data.items():
+                    if value is not None:
+                        print(f"{spacer}{BOLD}{key}{RESET}:", end=' ')
+                        if isinstance(value, (dict, list, tuple)):
+                            print()
+                            self.pretty_print(value, item=None, indent=indent + 4, count=None, debugmode=debugmode)
+                        else:
+                            print(f"{BOLD+BLUE}{value}{RESET}")
+            elif isinstance(data, (list, tuple)):
+                for index, entry in enumerate(data):
+                    if entry is not None:
+                        if isinstance(entry, (dict, list, tuple)):
+                            print(f"{spacer}{BOLD}Item{RESET} {CYAN}{index}{RESET}:")
+                            self.pretty_print(entry, item=None, indent = indent + 4, count=None, debugmode=debugmode)
+                        else:
+                            print(f"{spacer}{BOLD}Item{RESET} {CYAN}{index}{RESET}: {entry}")
+            else:
+                print(f"{spacer}{data}")
 
+        if item is not None:
+            print(f"{DIVIDER}\n\n")
         if debugmode and indent == 0:
             input('Press Enter to continue...')
 
@@ -217,7 +246,21 @@ class FilterDF():
 
         return dict_list
 
+    def dict_list_to_csv(self, data, filename=None):
+        if filename is None:
+            filename = self.output_dict_filename
+        if os.path.exists(filename):
+            mode='a'
+        else:
+            mode='w'
+        with open(filename, mode=mode, newline='') as file:
+            headers = data[0].keys()
+            writer = csv.DictWriter(file, fieldnames=headers)
+            writer.writeheader()
+            for entry in data:
+                writer.writerow(entry)
 
+        print(f"Data has been written to {GREEN}{filename}{RESET}")
 
 
 
@@ -336,45 +379,80 @@ class FilterDF():
         """
 
         input_dict = self.csv_to_dict_list()
+        output_dict = []
         count = 0
         for item in input_dict:
-
+            result_dict = {}
+            ethcall_dict = None
+            interpreted_args = None
+            abi_dict = None
             #region Initialise variables
             data = item.get('data', None)
             index = item.get('index', None)
             methodid = item.get('methodid', None)
             contract_address = item.get('to', None)
+            method = item.get('method', None)
+            details = item.get('details', None)
+            no_data_call = False
+            print(f"{MY_GREEN}{details}{RESET}")
+            if details == '0x_unknown' and (methodid == '' or methodid is None):
+                print(f"{YELLOW}Unknown data type{RESET}")
+                call_dict = self.create_call_dict(item, type=method)
+                no_data_call = True
+                
+            elif details == 'eth_address':
+                #print(f"{YELLOW}Eth address found{RESET}")
+                call_dict = self.create_call_dict(item, type=details)
+                no_data_call = True
+                
+            elif details == 'tx_hash':
+                #print(f"{YELLOW}Tx hash found{RESET}")
+                call_dict = self.create_call_dict(item, type=details)
+                no_data_call = True
+                
+            elif details == 'methodID':
 
-            print(f"\n{PINK}{DIVIDER}\n{BOLD}  Parsing and decoding dictionary # {BLUE}{count}{RESET}{PINK}\n{DIVIDER}{RESET}")
-            count += 1
+                print(f"{RED}MethodID found{RESET}")
+                call_dict = self.create_call_dict(item, type=details)
+                no_data_call = True
+                
             if contract_address is None or contract_address == '':
                 print(f"{RED}No contract address found in the dictionary.{RESET}")
-                print(item)
+                #TODO Handle this case:
+
+                call_dict = self.create_call_dict(item, type='methodID')
+                no_data_call = True
+                
+
+                
+
             #endregion
             
             #region getABI Get the ABI only if the contract address has changed (optimization)
-            if contract_address != self.contract_address:
+            if contract_address != self.contract_address and contract_address not in ('', None):
                 self.contract_address = contract_address
                 self.abi = self.get.abi(address=contract_address, debugging=debugmode)
                 if self.abi is None:
                     print(f"{RED}No ABI found for contract address: {contract_address}{RESET}")
-                    print(input_dict)
-                    return None
-                abi_dict = self.getmeth.abi_to_functions_dict(self.abi, debugmode)
+                    #TODO Handle this case:
+                    print(item)
+                    input('Press Enter to continue...')
+            abi_dict = self.getmeth.abi_to_functions_dict(self.abi, debugmode)
             #endregion
             
             
             
-            
-            if data is None or data == '' and methodid is not None:
-                print(f"{RED}No data found in the dictionary.{RESET}")
-                print(item)
-                #todo : attempt to get signature from methodID
+            if no_data_call:
+                print(f"{PINK}{item}{RESET}")
+                self.pretty_print(data, item=item, count=count, debugmode=debugmode)
                 continue
-            for item in abi_dict:
-                if item['selector'] == methodid:
-                    print(f"{GREEN}Found methodID in ABI{RESET} : {CYAN}{methodid}{RESET} | Signature : {CYAN+BOLD}{item['signature']}{RESET}")
-                    ethcall_dict = item
+            
+            for entry in abi_dict:
+                if entry['selector'] == methodid:
+                    print(f"{GREEN}Found methodID in ABI{RESET} : {CYAN}{methodid}{RESET}")
+                    item['signature'] = entry['signature']
+                    item['function_name'] = entry['function_name']
+                    ethcall_dict = entry
                     break
             if ethcall_dict is None:
                 input('Press Enter to continue...')
@@ -382,6 +460,9 @@ class FilterDF():
             ethcall_signature = ethcall_dict.get('signature', None)
             ethcall_names = ethcall_dict.get('names', None)
             ethcall_types = ethcall_dict.get('types', None)
+
+
+            count += 1
             
             
             
@@ -393,7 +474,7 @@ class FilterDF():
             
             
             
-            if 1==2:
+            if 1==2:#//TODO handle the case where functionsignature is not found through data. Use 4bytes api
                 if functionParam is None:
                     print(f"{RED}Cant find corresponding signature{RESET} : {CYAN}{methodid}{RESET}. Please check ABI{RESET}")
                     print(item)
@@ -410,11 +491,30 @@ class FilterDF():
                 print(f"{RED}Could not interpret arguments.{RESET}")
                 print(item)
                 return None
-            print(f"\n{DIVIDER}\n{CYAN}Index: {index}{RESET}\n{DIVIDER}")
-            self.pretty_print(interpreted_args)
-            print(f"{DIVIDER}")
 
+            self.pretty_print(interpreted_args, item=item, count=count, debugmode=debugmode) 
+            result_dict['item'] = item
+            result_dict['interpreted_args'] = interpreted_args
+            
+            output_dict.append(result_dict)
+            time.sleep(2)
+        self.dict_list_to_csv(output_dict)
         return
+    
+
+    def create_call_dict(self, item, type=None):
+        """
+        Creates a dictionary for a call.
+        """
+        call_dict = {}
+        call_dict['index'] = item.get('index', None)
+        call_dict['methodid'] = item.get('methodid', None)
+        call_dict[type] = item.get('data', None)
+        call_dict['details'] = item.get('details', None)
+        call_dict['contract_address'] = item.get('to', None)
+        call_dict['method'] = item.get('method', None)
+        call_dict['ExtraParams'] = item.get('ExtraParams', None)
+        return call_dict
 
 
 
@@ -430,10 +530,10 @@ def main():
     network_choice = 'berachain'
     rpc = RPC_CONFIGURATION[network_choice]
     filter_df = FilterDF(rpc=rpc, filename='data/events.json')
-    filter_df.extract_web3_readcalls(debugmode=True)
+    filter_df.extract_web3_readcalls(debugmode=False)
     #time.sleep(1)
     cls()
-    filter_df.parse_and_decode(debugmode=True)
+    filter_df.parse_and_decode(debugmode=False)
 
     
     

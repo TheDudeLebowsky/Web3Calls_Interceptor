@@ -116,7 +116,7 @@ class TransactGet():
         """Will check if the address is in the default ABI list first."""
         if address in self.main_abi_dict:
             abi = self.main_abi_dict[address]['abi']
-            print(F"{self.thread_name} : 🎯   Found ABI for : {GREEN}{address}{RESET} in config files")
+            print(F"🎯   Found ABI for : {GREEN}{address}{RESET} in config files") if debugging else None
             return abi
         explorer_endpoint = set_explorer_endpoint(self.rpc_network, address)
         while True:

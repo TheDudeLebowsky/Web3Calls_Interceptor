@@ -124,12 +124,12 @@ class TransactMethodID():
                 }
                 dict_list.append(function_dict)
                 
-
-        print(f"\n\n{BOLD}Function Dictionary : {RESET}")
-        for item in dict_list:
-            for key, value in item.items():
-                print(f"{key} : {value}")
-            print("\n")
+        if debugmode:
+            print(f"\n\n{BOLD}Function Dictionary : {RESET}")
+            for item in dict_list:
+                for key, value in item.items():
+                    print(f"{key} : {value}")
+                print("\n")
         return dict_list
     
     def find_methodid_in_signatures(self, target_method_id='0x62c79e2e', function_signatures=None):

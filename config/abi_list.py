@@ -7058,6 +7058,76 @@ ABI_BANK = [
   }
 ]
 
+ABI_EPOCH = [
+  {
+    "type": "function",
+    "name": "getCurrentEpoch",
+    "inputs": [
+      {
+        "name": "identifier",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "epochNumber",
+        "type": "int64",
+        "internalType": "int64"
+      },
+      {
+        "name": "startTimestamp",
+        "type": "int64",
+        "internalType": "int64"
+      },
+      {
+        "name": "endTimestamp",
+        "type": "int64",
+        "internalType": "int64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "event",
+    "name": "EpochEnd",
+    "inputs": [
+      {
+        "name": "epochNumber",
+        "type": "int64",
+        "indexed": True,
+        "internalType": "int64"
+      },
+      {
+        "name": "endTime",
+        "type": "int64",
+        "indexed": False,
+        "internalType": "int64"
+      }
+    ],
+    "anonymous": False
+  },
+  {
+    "type": "event",
+    "name": "EpochStart",
+    "inputs": [
+      {
+        "name": "epochNumber",
+        "type": "int64",
+        "indexed": True,
+        "internalType": "int64"
+      },
+      {
+        "name": "startTime",
+        "type": "int64",
+        "indexed": False,
+        "internalType": "int64"
+      }
+    ],
+    "anonymous": False
+  }
+]
+
 DEFAULT_ABI_LIST=   {
                     'WBERA' :        {'type': 'ETH',          'address':    '0x5806E416dA447b267cEA759358cF22Cc41FAE80F',    'abi': ABI_WETH},
                     'HONEY' :        {'type': 'ERC20',        'address':    '0x7EeCA4205fF31f947EdBd49195a7A88E6A91161B',    'abi': ABI_DEFAULT},
@@ -7081,6 +7151,7 @@ DEFAULT_ABI_LIST=   {
                     'VOTE':          {'type': 'Contract',     'address':    '0x7b5Fe22B5446f7C62Ea27B8BD71CeF94e03f3dF2',    'abi': ABI_VOTE},
                     'BANK':          {'type': 'Contract',     'address':    '0x4381dC2aB14285160c808659aEe005D51255adD7',    'abi': ABI_BANK}
                     }
+
 
 #endregion
 

@@ -148,7 +148,8 @@ MAIN_DICT = {
                             'lend': False,
                             'decimals': 18
                             
-                        }
+                        },
+                        
                         ],
             'nft':      [
                         {
@@ -278,6 +279,11 @@ MAIN_DICT = {
                             'address': '0x3031fE6A015f367D675476F48499C8A9517cEc34',
                             'abi': ABI_AAVE_ORACLE,
                         },
+                        {
+                            'name': 'EPOCH',
+                            'address': '0x612Dd8a861161819A4AD8F6f3E2A0567602877c0',
+                            'abi': ABI_EPOCH,
+                        }
 
                         ]
 },
