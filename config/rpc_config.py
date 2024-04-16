@@ -57,16 +57,7 @@ RPC_CONFIGURATION =     {
                         'geth_poa_middleware': False,
                         },
     
-    'goerli':           {
-                        'network': 'goerli',
-                        'url': 'https://ethereum-goerli.publicnode.com',
-                        'chain_id': 5,
-                        'token':'gETH',
-                        'explorer':'https://goerli.etherscan.io/tx/',
-                        'api_key': API_GENERAL,
-                        'abi_endpoint': f"https://api-goerli.etherscan.io/api?module=contract&action=getabi&address=",
-                        'geth_poa_middleware': False,
-                        },
+
     
     
     'mumbai' :          {
@@ -102,7 +93,16 @@ RPC_CONFIGURATION =     {
                         'api_key': API_GENERAL,
                         'abi_endpoint': f"https://api-sepolia.arbiscan.io/api?module=contract&action=getabi&address=",
                         'geth_poa_middleware': False,
-                        }
+                        },
+    'sepolia':          {
+                        'network': 'sepolia',
+                        'url': 'https://ethereum-sepolia-rpc.publicnode.com',
+                        'chain_id': 1337, 'token':'ETH',
+                        'explorer':'https://sepolia.etherscan.io/tx/',
+                        'api_key': API_GENERAL,
+                        'abi_endpoint': f"https://api-sepolia.etherscan.io/api?module=contract&action=getabi&address=",
+                        'geth_poa_middleware': False,
+                        },
 }
 
 #Alt RPC:
