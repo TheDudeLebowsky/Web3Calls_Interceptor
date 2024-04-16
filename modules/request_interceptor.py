@@ -4,7 +4,7 @@ from seleniumbase import SB
 import pandas as pd
 import threading
 import os
-
+import json
 
 
 RED = "\033[91m"
@@ -31,7 +31,7 @@ class CDPTests(BaseCase):
 
         
         super(CDPTests, self).setUp()
-        self.initial_url = "https://artio.bend.berachain.com/dashboard"
+        self.initial_url = "https://rinkeby.orbiter.finance/?source=Berachain%20Artio&dest=Sepolia&token=BERA"
         self.requests_counter = 0
         self.tab_counter = 0
         self.event_data = []
@@ -39,17 +39,18 @@ class CDPTests(BaseCase):
         self.output_file_path_json = 'events.json'
         self.network_requests = True
         self.network_responses = True
-
+        if not os.path.exists(self.output_file_path_json):
+            self.write_mode = 'w'
+        else:
+            print(f"{YELLOW}File already exists. Will be appending to file{RESET}")
+            self.write_mode = 'a'
     #HELPER FUNCTIONS
     def save_to_json(self):
-        """Updates the JSON file with the latest event data."""
-        if not os.path.exists(self.output_file_path_json):
-            self.events_df.to_json( self.output_file_path_json, orient='records', lines=True, date_format='iso', mode='w')
-        else:
-            print("Appending to the file")
-            self.events_df.to_json( self.output_file_path_json, orient='records', lines=True, date_format='iso', mode='a')
-            
-            #self.events_df.to_json( self.output_file_path_json, orient='records', lines=True, date_format='iso')
+        #//TODO: Handle large files and do not save duplicates
+
+        self.events_df.to_json( self.output_file_path_json, orient='records', lines=True, date_format='iso', mode=self.write_mode)
+
+
 
     def switch_to_latest_tab_periodically(self, interval=5):
         """
@@ -71,16 +72,29 @@ class CDPTests(BaseCase):
     def add_cdp_listener(self):
 
         #To print everything, use "*". Otherwise select specific headers.
-        def capture_data(data, save_to_file=True):
-            print(f"{BLUE}{self.current_window_title}{RESET} | Tabs opened {CYAN}{self.tab_counter}{RESET} | Intercepted request # {CYAN}{self.requests_counter}{RESET}{PADDING}", end="\r")
+        def capture_datav1(data, save_to_file=True):
+            print(f"{BLUE}{self.current_window_title}{RESET} | Tabs opened {CYAN}{self.tab_counter}{RESET} | Intercepted request # {CYAN}{self.requests_counter}{RESET}{PADDING}")
             self.requests_counter += 1
-            self.event_data.append(data)
+            if data not in self.event_data:
+                self.event_data.append(data)
+            else:
+                print(f"{RED}Duplicate request{RESET}")
             self.events_df = pd.DataFrame(self.event_data)
             if save_to_file:
                 self.save_to_json()
             else:
                 print(pformat(data))
-
+        def capture_data(data, save_to_file=True):
+            data_string = json.dumps(data, sort_keys=True)
+            if data_string not in [json.dumps(d, sort_keys=True) for d in self.event_data]:
+                print(f"{BLUE}{self.current_window_title}{RESET} | Tabs opened {CYAN}{self.tab_counter}{RESET} | Intercepted request # {CYAN}{self.requests_counter}{RESET}{PADDING}", end="\r")
+                self.event_data.append(data)
+                self.requests_counter += 1
+                self.events_df = pd.DataFrame(self.event_data)
+                if save_to_file:
+                    self.save_to_json()
+            else:
+                print(f"{RED}Duplicate request{RESET}")
         #Add the CDP listeners according to the options
         if self.network_requests is True:
             self.driver.add_cdp_listener(
@@ -131,9 +145,16 @@ if __name__ == "__main__":
     #interceptor.test_main()
     
     from pytest import main
-    USER_DIR = 'user_data_dir'
-    #//IMPORTANT Path to the extension directory
-    DIR1 = 'extensions/jifpbeccnghkjeaalbbjmodiffmgedin/1.7.0_0' # Chrome extension source viewer
-    DIR = 'extensions/nkbihfbeogaeaoehlefnkodbefgpgknn/11.13.1_0' # Metamask --extension-dir="dir1,dir2"
 
-    main([__file__, "--uc", "--uc-cdp", "-s", f"--extension_dir={DIR}", f"--user_data_dir={USER_DIR}"])
+
+
+
+
+    #//MAIN FUNCTION
+
+    USER_DIR = 'user_data_dir' #f"--user_data_dir={USER_DIR}"
+    #PROXY = 'ENTER PROXY HERE'      #Format : --proxy=USERNAME:PASSWORD@IP_ADDRESS:PORT
+    DIR = 'extensions/nkbihfbeogaeaoehlefnkodbefgpgknn/11.13.1_0' # Metamask Format : --extension-dir="dir1,dir2"
+    DIR1 = 'extensions/jifpbeccnghkjeaalbbjmodiffmgedin/1.7.0_0' # Chrome extension source viewer
+
+    main([__file__, "--uc", "--uc-cdp", "-s", f"--extension_dir={DIR}"])
