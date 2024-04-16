@@ -3,11 +3,12 @@ import os
 import re
 import sys
 from eth_utils import function_abi_to_4byte_selector
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.')))
 from modules.my_colors import *
 from config.abi_list import *
 from config.addresses import *
 from config.rpc_config import RPC_CONFIGURATION
-
+from modules.extract_variables_from_file import FileExtractor
 
 #//TODO : clean the code, refactor, do additional testing and verifiy the formatting so i can use it to decode input data from transactions
 
@@ -32,7 +33,6 @@ class TransactMethodID():
         self.thread_name = kwargs.get('thread_name','WTF')
         #self.get=None
         self.get = kwargs.get('get', None) #TransactGet(rpc=self.rpc, web3=self.web3)
-
 
 #//obsolete
     def extract_params_from_functionSignaturev1(self, function_signature):
@@ -132,6 +132,22 @@ class TransactMethodID():
                 print("\n")
         return dict_list
     
+    def create_functions_dict_dataset(self, filename='config/abi_list.py', debugmode=False):
+        """
+        Creates a dataset of function dictionaries from a list of contract's ABI.
+        """
+        self.fileextractor = FileExtractor(filename) 
+        self.variable_dict = self.fileextractor.get_variables_values() 
+        all_dict_list = {}
+
+        for key, abi in self.variable_dict.items():
+            print(f"Key : {key} --> ABI : {abi}") if debugmode else None
+            dict_list = self.abi_to_functions_dict(abi, debugmode)
+            all_dict_list[key] = dict_list
+        return all_dict_list
+
+
+
     def find_methodid_in_signatures(self, target_method_id='0x62c79e2e', function_signatures=None):
         """Finds the function signature that matches the target method ID."""
         """Use with get_function_signature_from_abi() to get the function signatures."""
@@ -267,7 +283,8 @@ def main():
     cls()
     #cryptotest.compare(inputs, expected)
     #cryptotest.abi_to_functionSignatures(abi=ABI_PoolAddressProvider)
-    cryptotest.abi_to_functions_dict(ABI_MULTICALL, debugmode=True)
+    #cryptotest.abi_to_functions_dict(ABI_ERC20, debugmode=True)
+    cryptotest.create_functions_dict_dataset(debugmode=True)
     #cryptotest.methodID_to_functionSignature(methodID='0xc2eb8013', abi=SYNTHR_ABI_LEND)
     #cryptotest.checksum('0x101f52c804c1c02c0a1d33442eca30ecb6fb2434')
     #cryptotest.find_methodid_in_signatures(target_method_id='0xc2eb8013', function_signatures=signatures)
