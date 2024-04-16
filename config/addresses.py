@@ -18,11 +18,22 @@ MAIN_DICT = {
 'multichain':           {
     'token':            [
                         {
+                            'name': 'DEFAULT_ERC20',
+                            'address': 'DEFAULT_ERC20',
+                            'abi': ABI_ERC20,
+                        },
+                        {
                             'name': 'ZERO_ADDRESS',
                             'address': '0x0000000000000000000000000000000000000000',
                         },
                         ],
-    'nft':              [],
+    'nft':              [
+                        {
+                            'name': 'DEFAULT_ERC721',
+                            'address': 'DEFAULT_ERC721',
+                            'abi': ABI_ERC721,
+                        }
+                        ],
     'pool':             [],
     'contract':         [
 
