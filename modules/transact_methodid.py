@@ -9,6 +9,7 @@ from config.abi_list import *
 from config.addresses import *
 from config.rpc_config import RPC_CONFIGURATION
 from modules.extract_variables_from_file import FileExtractor
+from modules.transact_get import TransactGet
 
 #//TODO : clean the code, refactor, do additional testing and verifiy the formatting so i can use it to decode input data from transactions
 
@@ -32,7 +33,7 @@ class TransactMethodID():
         self.web3 = kwargs.get('web3', Web3(Web3.HTTPProvider(self.rpc_url)))
         self.thread_name = kwargs.get('thread_name','WTF')
         #self.get=None
-        self.get = kwargs.get('get', None) #TransactGet(rpc=self.rpc, web3=self.web3)
+        self.get = kwargs.get('get', TransactGet(rpc=self.rpc, web3=self.web3)) 
 
 #//obsolete
     def extract_params_from_functionSignaturev1(self, function_signature):
@@ -90,27 +91,27 @@ class TransactMethodID():
                 for param in item['inputs']:
                     function_dict = {}
                     if param['type'] == 'tuple[]':
-                        # Handle tuple array types by expanding their structure
+                        
                         tuple_components = param.get('components', [])
                         tuple_signature = '(' + ','.join(f"{c['type']}" for c in tuple_components) + ')[]'
                         param_details.append(param['name'] + tuple_signature)
-                        types.append(tuple_signature) #TESTING
+                        types.append(tuple_signature) 
                     elif param['type'].startswith('tuple'):
-                        # Handle single tuple types
+                        
                         tuple_components = param.get('components', [])
                         tuple_signature = '(' + ','.join(f"{c['type']}" for c in tuple_components) + ')'
                         param_details.append(param['name'] + tuple_signature)
-                        types.append(tuple_signature) #TESTING
+                        types.append(tuple_signature) 
                     else:
-                        # Handle simple types
+            
                         param_details.append(param['name'] + '[' + param['type'] + ']')
-                        types.append(param['type'])  # Collect parameter type #TESTING was using this
-                    names.append(param['name'])  # Collect parameter name
+                        types.append(param['type']) 
+                    names.append(param['name']) 
                 signature += ','.join(param_details)
                 signature += ')'
 
 
-                # Generate the selector based on the function signature
+                
                 selector = function_abi_to_4byte_selector(item).hex()
                 selector = '0x' + selector
                 params = self.extract_params_from_functionSignature(signature)
