@@ -11,8 +11,6 @@ RESET = "\033[0m"
 BOLD = "\033[1m"
 
 
-#//todo : update original address.py with new improvements
-#//COMPLETE MAIN_DICT
 
 MAIN_DICT = {
 'multichain':           {
