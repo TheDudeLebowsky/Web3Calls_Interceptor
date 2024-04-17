@@ -1,17 +1,24 @@
 from Crypto.Hash import keccak
+
+
+
+"""This module calculates the ERC721 interface ID."""
+"""To be used to verify if a contract is ERC721 compliant."""
+
+
 def keccak256(data):
     k = keccak.new(digest_bits=256)
     k.update(data.encode())
-    return k.digest()[:4]  # Return the first 4 bytes of the hash
+    return k.digest()[:4]  
 
-# Function to convert bytes to hexadecimal
+
 def to_hex(data):
     return data.hex()
 
 def calculate_interface_id(*functions):
     interface_id = 0
     for func in functions:
-        hashed = int.from_bytes(keccak256(func), 'big')  # Convert bytes to int for XOR
+        hashed = int.from_bytes(keccak256(func), 'big')
         interface_id ^= hashed
     return hex(interface_id)
 erc721_functions = [
@@ -26,4 +33,4 @@ erc721_functions = [
     'safeTransferFrom(address,address,uint256,bytes)'
 ]
 ERC721_INTERFACE_ID = calculate_interface_id(*erc721_functions)
-print("ERC-721 Interface ID:", ERC721_INTERFACE_ID)
+
