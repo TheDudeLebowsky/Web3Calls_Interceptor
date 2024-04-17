@@ -8,13 +8,23 @@
 /user_data_dir/*
 /airdrop.py
 /transact_abidecode.py
-
+/activity_monitor.py
 /modules/__pycache__
 /.pytest_cache
 
 /archived_logs
 
 /latest_logs
-
+/data/events.json
 /modules/request_interceptorv2.py
 /SeleniumBase
+/modules/activity_monitor.py
+/modules/del.py
+/modules/Untitled-1.py
+/decoded_events.csv
+/events.json
+/twitterevents.json
+/web3_readcalls.csv
+/data/events.json
+
+/data
