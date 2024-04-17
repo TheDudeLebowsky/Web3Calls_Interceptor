@@ -16,14 +16,11 @@ from modules.my_colors import *
 from modules.transact_methodid import TransactMethodID
 from config.rpc_config import RPC_CONFIGURATION
 from modules.transact_inputdata_decoder import InputDataDecoder
-from pygments import highlight
-from pygments.lexers import JsonLexer
-from pygments.formatters import TerminalFormatter
+from modules.extract_variables_from_file import FileExtractor
 DIVIDER = '-' * 100
 
 
 
-#//TODO Clean the code and remove unnecessary functions
 
 
 def cls():
@@ -31,17 +28,17 @@ def cls():
         os.system('cls')
 
 class FilterDF():
-    def __init__(self, rpc=None, filename='data/events.json'):
+    def __init__(self, rpc=None, filename='data/events.json', abi_file_name='config/abi_list.py', debugmode=False):
         with open(filename, 'r') as f:
             data = pd.read_json(f, lines=True)
 
         self.df = pd.json_normalize(data.to_dict(orient="records"))
         self.df = self.df.dropna(axis=1, how='all')
-        self.df.to_csv('data/events.csv', index=False)
+        self.df.to_csv('events.csv', index=False)
         pd.set_option('display.max_colwidth', 30)
         pd.set_option('display.max_columns', None)
         self.filename = filename
-        self.output_dict_filename = 'data/decoded_events.csv'
+        self.output_dict_filename = 'decoded_events.csv'
         self.eth_address_pattern = re.compile(r'^0x[a-fA-F0-9]{40}$')
         self.method_id_pattern = re.compile(r'^0x[a-fA-F0-9]{8}$')
         self.hash_pattern = re.compile(r'^0x[a-fA-F0-9]{64}$')
@@ -58,7 +55,9 @@ class FilterDF():
         self.inputdecoder = InputDataDecoder()
         self.contract_address = None
         self.abi = None
-        self.dict_filename = 'data/web3_readcalls.csv'
+        self.dict_filename = 'web3_readcalls.csv'
+        self.fileextractor = FileExtractor(filename = abi_file_name)
+        self.variable_dict = self.fileextractor.get_variables_values() 
 
     
     #//HELPER_FUNCTIONS
@@ -190,11 +189,11 @@ class FilterDF():
             details = ''
             details += (f"\n\n{BOLD+PINK+BRIGHT}{DIVIDER}\n{BOLD}{PADDING}Parsing and decoding dictionary # {BLUE}{count}{RESET}{PINK}\n{DIVIDER}{RESET}\n") if count is not None else ''
             details += (f"{BOLD}Index{RESET} : {BOLD+CYAN}{index}{RESET}\n") if index is not None else ''
-            details += (f"{BOLD}MethodID{RESET} : {BOLD+CYAN}{methodid}{RESET}\n") if methodid is not None or methodid != '' else ''
+            details += (f"{BOLD}MethodID{RESET} : {BOLD+CYAN}{methodid}{RESET}\n") if methodid is not None and methodid != '' else ''
             details += (f"{BOLD}Function called{RESET} : {BOLD+CYAN}{function_name}{RESET}\n") if function_name is not None else ''
             details += (f"{BOLD}Signature{RESET} : {BOLD+CYAN}{signature}{RESET}\n") if signature is not None else ''
-            #details += (f"{BOLD}Method{RESET} : {BOLD+CYAN}{method}{RESET}\n") if method is not None else ''
-            details += (f"{BOLD}Contract Address{RESET} : {BOLD+CYAN}{contract_address}{RESET}\n") if contract_address is not None or contract_address != '' else ''
+            details += (f"{BOLD}Method{RESET} : {BOLD+CYAN}{method}{RESET}\n") if method is not None else ''
+            details += (f"{BOLD}Contract Address{RESET} : {BOLD+CYAN}{contract_address}{RESET}\n") if contract_address is not None and contract_address != '' else ''
             details += (f"{DIVIDER}")
             print(details)
             if data is None or data == '' or data == {} or data == []:
@@ -349,7 +348,12 @@ class FilterDF():
                                 print(f"{YELLOW}Could not parse param: {first_param}{RESET}")  
 
                             #Exclude empty data
-                            if result['data'] is not None or result['data'] != '':
+                            
+                            if (result['data'] is None or result['data'] == '') and (result['methodid'] is None or result['methodid'] == '') and (result['to'] is None or result['to'] == ''):
+                                print(f"{YELLOW}Empty data, methodid and to. Skipping...{RESET}")
+      
+                                continue
+                            if (result['data'] is not None or result['data'] != ''):
                                 #Exclude eth_getTransactionReceipt, eth_getBalance, eth_getTransactionCount to focus on contract calls
                                 if result['method'] not in ['eth_getTransactionReceipt', 'eth_getBalance', 'eth_getTransactionCount']:
                                     result_list.append(result)
@@ -368,6 +372,7 @@ class FilterDF():
             print(f"Total length of result_list: {CYAN}{len(result_list)}{RESET}")
             self.print_list_of_dicts(result_list)
         self.save_dict_to_csv(result_list)
+        time.sleep(1)
         return result_list
     
 
@@ -380,6 +385,7 @@ class FilterDF():
 
         input_dict = self.csv_to_dict_list()
         output_dict = []
+        all_abi_dict = self.getmeth.create_functions_dict_dataset()
         count = 0
         for item in input_dict:
             result_dict = {}
@@ -394,97 +400,44 @@ class FilterDF():
             method = item.get('method', None)
             details = item.get('details', None)
             no_data_call = False
-            print(f"{MY_GREEN}{details}{RESET}")
-            if details == '0x_unknown' and (methodid == '' or methodid is None):
-                print(f"{YELLOW}Unknown data type{RESET}")
-                call_dict = self.create_call_dict(item, type=method)
-                no_data_call = True
-                
-            elif details == 'eth_address':
-                #print(f"{YELLOW}Eth address found{RESET}")
-                call_dict = self.create_call_dict(item, type=details)
-                no_data_call = True
-                
-            elif details == 'tx_hash':
-                #print(f"{YELLOW}Tx hash found{RESET}")
-                call_dict = self.create_call_dict(item, type=details)
-                no_data_call = True
-                
-            elif details == 'methodID':
 
-                print(f"{RED}MethodID found{RESET}")
-                call_dict = self.create_call_dict(item, type=details)
-                no_data_call = True
-                
-            if contract_address is None or contract_address == '':
-                print(f"{RED}No contract address found in the dictionary.{RESET}")
-                #TODO Handle this case:
-
-                call_dict = self.create_call_dict(item, type='methodID')
-                no_data_call = True
-                
+            if (details == '0x_unknown' and (methodid == '' or methodid is None)) or details == 'eth_address' or details == 'tx_hash' or details == 'methodID':
+                self.pretty_print(data, item=item, count=count, debugmode=debugmode)
+                continue                
 
                 
 
-            #endregion
-            
             #region getABI Get the ABI only if the contract address has changed (optimization)
             if contract_address != self.contract_address and contract_address not in ('', None):
                 self.contract_address = contract_address
                 self.abi = self.get.abi(address=contract_address, debugging=debugmode)
                 if self.abi is None:
-                    print(f"{RED}No ABI found for contract address: {contract_address}{RESET}")
-                    #TODO Handle this case:
-                    print(item)
-                    input('Press Enter to continue...')
-            abi_dict = self.getmeth.abi_to_functions_dict(self.abi, debugmode)
+                    print(f"{RED}No ABI found for contract address: {contract_address} on etherscan.{RESET}") if debugmode else None
+            if self.abi is not None and self.abi != '':
+                abi_dict_list = self.getmeth.abi_to_functions_dict(self.abi, debugmode)
+                abi_dict_list = [abi_dict_list]
+            else:
+                abi_dict_list = list(all_abi_dict.values())
             #endregion
             
             
-            
-            if no_data_call:
-                print(f"{PINK}{item}{RESET}")
-                self.pretty_print(data, item=item, count=count, debugmode=debugmode)
-                continue
-            
-            for entry in abi_dict:
-                if entry['selector'] == methodid:
-                    print(f"{GREEN}Found methodID in ABI{RESET} : {CYAN}{methodid}{RESET}")
-                    item['signature'] = entry['signature']
-                    item['function_name'] = entry['function_name']
-                    ethcall_dict = entry
-                    break
+        
+            ethcall_dict = find_match_in_abi(abi_dict_list, methodid)
             if ethcall_dict is None:
                 input('Press Enter to continue...')
-            ethcall_params = ethcall_dict.get('params', None)
-            ethcall_signature = ethcall_dict.get('signature', None)
-            ethcall_names = ethcall_dict.get('names', None)
-            ethcall_types = ethcall_dict.get('types', None)
 
+            print(f"{GREEN}ABI found for contract address: {contract_address} on dataset{RESET}") if debugmode else None
+            #//TODO handle the case where multiple matches are found
+            ethcall_signature = ethcall_dict[0].get('signature', None)
+            ethcall_names = ethcall_dict[0].get('names', None)
+            ethcall_types = ethcall_dict[0].get('types', None)
+            if ethcall_signature is not None and item.get('signature', None) is None:
+                item['signature'] = ethcall_signature
 
             count += 1
             
             
-            
-
-            #functionParam = self.decoder.methodID_to_functionParams(methodID=methodID, abi=self.abi, debugmode=debugmode)
-            #functionSignature = self.get4bytes.get_functionSignature_from_methodID(methodID, debugmode=debugmode)
-            
-            
-            
-            
-            
-            if 1==2:#//TODO handle the case where functionsignature is not found through data. Use 4bytes api
-                if functionParam is None:
-                    print(f"{RED}Cant find corresponding signature{RESET} : {CYAN}{methodid}{RESET}. Please check ABI{RESET}")
-                    print(item)
-                    return None
-                else:
-                    functionParam = self.decoder.parse_function_signature(functionParam)
-            
-            #Decode baby!
-            argumentsList = self.inputdecoder.parse_input_data(data, debugmode) #//DEBUG
-            interpreted_args = self.inputdecoder.decode_this(data, ethcall_types, ethcall_names, debugmode)
+            interpreted_args = self.inputdecoder.decode_this(data, ethcall_types, ethcall_names, debugmode) #//MAIN
             
             
             if interpreted_args is None:
@@ -517,6 +470,30 @@ class FilterDF():
         return call_dict
 
 
+def find_match_in_abi(abi_dict_list, methodid, debugmode=False):
+    unique_entries = {}
+
+    for abi_dict in abi_dict_list:
+        for entry in abi_dict:
+            if entry.get('selector') == methodid:
+                function_name = entry.get('function_name')
+                signature = entry.get('signature')
+
+                if signature not in unique_entries:
+                    unique_entries[function_name] = entry
+
+    for key, value in unique_entries.items():
+        print(f"{key}: {value}")  if debugmode else None  
+    result = list(unique_entries.values())
+    if len(result) == 1:
+        return result
+    elif len(result) > 1:
+        print(f"{RED}Multiple matches found for methodID: {methodid}{RESET}")
+        for entry in result:
+            print(f"{entry.get('function_name')}")
+        return result
+    else:
+        return None
 
 
 
@@ -531,7 +508,6 @@ def main():
     rpc = RPC_CONFIGURATION[network_choice]
     filter_df = FilterDF(rpc=rpc, filename='data/events.json')
     filter_df.extract_web3_readcalls(debugmode=False)
-    #time.sleep(1)
     cls()
     filter_df.parse_and_decode(debugmode=False)
 
