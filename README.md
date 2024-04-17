@@ -27,10 +27,9 @@
 - It is important the format is consistent as shown in examples files
 - Some decoding errors might arise. Please provide feedback and bugreports in order to fix the issues
 - main.py is in progress to allow the full process to be initiated from here
+- DO NOT use for a long period until additional request filter add implemented. (2-3 min max) events.json will get massive really fast leading to unexpected errors
 
 ## Whats next
 
-- Replace BaseCase to SB
 - Additional testing to make sure it handles different formatting
-- Add ABI dataset and querying function
 - Fix user data dir and allow multiple extensions
